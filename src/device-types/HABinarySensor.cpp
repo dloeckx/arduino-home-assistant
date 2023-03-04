@@ -50,7 +50,7 @@ void HABinarySensor::onMqttConnected()
         return;
     }
 
-    success = true;
+    bool success = true;
     success &= publishConfig();
     success &= publishAvailability();
     success &= publishState(_currentState);
