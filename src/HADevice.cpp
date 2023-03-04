@@ -138,9 +138,6 @@ void HADevice::publishAvailability() const
 
     const char* payload = _available ? HAOnline : HAOffline;
     const uint16_t length = strlen_P(payload);
-
-    if (mqtt->beginPublish(_availabilityTopic, length, true)) {
-        mqtt->writePayload(AHATOFSTR(payload));
-        mqtt->endPublish();
-    }
+    mqtt->publish(_availabilityTopic, payload, true);
+    return;
 }

@@ -356,45 +356,48 @@ void HAHVAC::buildSerializer()
 void HAHVAC::onMqttConnected()
 {
     if (!uniqueId()) {
+        _success = false;
         return;
     }
 
-    publishConfig();
-    publishAvailability();
+    bool success = true;
+    success &= publishConfig();
+    success &= publishAvailability();
 
     if (!_retain) {
-        publishCurrentTemperature(_currentTemperature);
-        publishAction(_action);
-        publishAuxState(_auxState);
-        publishFanMode(_fanMode);
-        publishSwingMode(_swingMode);
-        publishMode(_mode);
-        publishTargetTemperature(_targetTemperature);
+        success &= publishCurrentTemperature(_currentTemperature);
+        success &= publishAction(_action);
+        success &= publishAuxState(_auxState);
+        success &= publishFanMode(_fanMode);
+        success &= publishSwingMode(_swingMode);
+        success &= publishMode(_mode);
+        success &= publishTargetTemperature(_targetTemperature);
     }
 
     if (_features & AuxHeatingFeature) {
-        subscribeTopic(uniqueId(), AHATOFSTR(HAAuxCommandTopic));
+        success &= subscribeTopic(uniqueId(), AHATOFSTR(HAAuxCommandTopic));
     }
 
     if (_features & PowerFeature) {
-        subscribeTopic(uniqueId(), AHATOFSTR(HAPowerCommandTopic));
+        success &= subscribeTopic(uniqueId(), AHATOFSTR(HAPowerCommandTopic));
     }
 
     if (_features & FanFeature) {
-        subscribeTopic(uniqueId(), AHATOFSTR(HAFanModeCommandTopic));
+        success &= subscribeTopic(uniqueId(), AHATOFSTR(HAFanModeCommandTopic));
     }
 
     if (_features & SwingFeature) {
-        subscribeTopic(uniqueId(), AHATOFSTR(HASwingModeCommandTopic));
+        success &= subscribeTopic(uniqueId(), AHATOFSTR(HASwingModeCommandTopic));
     }
 
     if (_features & ModesFeature) {
-        subscribeTopic(uniqueId(), AHATOFSTR(HAModeCommandTopic));
+        success &= subscribeTopic(uniqueId(), AHATOFSTR(HAModeCommandTopic));
     }
 
     if (_features & TargetTemperatureFeature) {
-        subscribeTopic(uniqueId(), AHATOFSTR(HATemperatureCommandTopic));
+        success &= subscribeTopic(uniqueId(), AHATOFSTR(HATemperatureCommandTopic));
     }
+    _success = success;
 }
 
 void HAHVAC::onMqttMessage(

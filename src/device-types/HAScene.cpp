@@ -47,12 +47,15 @@ void HAScene::buildSerializer()
 void HAScene::onMqttConnected()
 {
     if (!uniqueId()) {
+        _success = false;
         return;
     }
 
-    publishConfig();
-    publishAvailability();
-    subscribeTopic(uniqueId(), AHATOFSTR(HACommandTopic));
+    success = true;
+    success &= publishConfig();
+    success &= publishAvailability();
+    success &= subscribeTopic(uniqueId(), AHATOFSTR(HACommandTopic));
+    _success = success;
 }
 
 void HAScene::onMqttMessage(

@@ -30,7 +30,7 @@ HAMqtt* HABaseDeviceType::mqtt()
     return HAMqtt::instance();
 }
 
-void HABaseDeviceType::subscribeTopic(
+bool HABaseDeviceType::subscribeTopic(
     const char* uniqueId,
     const __FlashStringHelper* topic
 )
@@ -40,7 +40,7 @@ void HABaseDeviceType::subscribeTopic(
         topic
     );
     if (topicLength == 0) {
-        return;
+        return false;
     }
 
     char fullTopic[topicLength];
@@ -49,10 +49,10 @@ void HABaseDeviceType::subscribeTopic(
         uniqueId,
         topic
     )) {
-        return;
+        return false;
     }
 
-    HAMqtt::instance()->subscribe(fullTopic);
+    return HAMqtt::instance()->subscribe(fullTopic);
 }
 
 void HABaseDeviceType::onMqttMessage(
@@ -74,19 +74,19 @@ void HABaseDeviceType::destroySerializer()
     }
 }
 
-void HABaseDeviceType::publishConfig()
+bool HABaseDeviceType::publishConfig()
 {
     buildSerializer();
 
     if (_serializer == nullptr) {
-        return;
+        return false;
     }
 
     const uint16_t topicLength = HASerializer::calculateConfigTopicLength(
         componentName(),
         uniqueId()
     );
-    const uint16_t dataLength = _serializer->calculateSize();
+    const uint16_t dataLength = _serializer->calculateSize() + 1;
 
     if (topicLength > 0 && dataLength > 0) {
         char topic[topicLength];
@@ -96,16 +96,24 @@ void HABaseDeviceType::publishConfig()
             uniqueId()
         );
 
-        if (mqtt()->beginPublish(topic, dataLength, true)) {
-            _serializer->flush();
-            mqtt()->endPublish();
-        }
+        char data[dataLength];
+        mqtt()->startPayload(data, dataLength);
+        _serializer->flush();
+
+        ARDUINOHA_DEBUG_PRINTLN(data)
+
+        _success = mqtt()->publish(topic, data, true);
+        ARDUINOHA_DEBUG_PRINTLN(_success)
+    } else {
+        _success = false;
     }
 
     destroySerializer();
+
+    return _success;
 }
 
-void HABaseDeviceType::publishAvailability()
+bool HABaseDeviceType::publishAvailability()
 {
     const HADevice* device = mqtt()->getDevice();
     if (
@@ -113,10 +121,10 @@ void HABaseDeviceType::publishAvailability()
         device->isSharedAvailabilityEnabled() ||
         !isAvailabilityConfigured()
     ) {
-        return;
+        return false;
     }
 
-    publishOnDataTopic(
+    return publishOnDataTopic(
         AHATOFSTR(HAAvailabilityTopic),
         _availability == AvailabilityOnline
             ? AHATOFSTR(HAOnline)
@@ -191,15 +199,5 @@ bool HABaseDeviceType::publishOnDataTopic(
         return false;
     }
 
-    if (mqtt()->beginPublish(fullTopic, length, retained)) {
-        if (isProgmemData) {
-            mqtt()->writePayload(AHATOFSTR(payload));
-        } else {
-            mqtt()->writePayload(payload, length);
-        }
-
-        return mqtt()->endPublish();
-    }
-
-    return false;
+    return _success = mqtt()->publish(fullTopic, (const char *)payload, retained);
 }

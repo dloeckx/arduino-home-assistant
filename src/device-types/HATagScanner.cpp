@@ -33,6 +33,7 @@ void HATagScanner::buildSerializer()
 void HATagScanner::onMqttConnected()
 {
     if (!uniqueId()) {
+        _success = false;
         return;
     }
 

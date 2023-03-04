@@ -63,6 +63,12 @@ public:
         { return (_availability == AvailabilityOnline); }
 
     /**
+     * Returns if last publish was successful
+     */
+    inline const bool getSuccess() const
+        { return _success; }
+
+    /**
      * Sets name of the device type that will be used as a label in the HA panel.
      * Keep the name short to save the resources.
      *
@@ -108,7 +114,7 @@ protected:
      * @param uniqueId THe unique ID of the device type assigned via the constructor.
      * @param topic Topic to subscribe (progmem string).
      */
-    static void subscribeTopic(
+    static bool subscribeTopic(
         const char* uniqueId,
         const __FlashStringHelper* topic
     );
@@ -149,13 +155,13 @@ protected:
     /**
      * Publishes configuration of this device type on the HA discovery topic.
      */
-    void publishConfig();
+    bool publishConfig();
 
     /**
      * Publishes current availability of the device type.
      * The message is only produced if the availability is configured for this device type.
      */
-    void publishAvailability();
+    bool publishAvailability();
 
     /**
      * Publishes the given flash string on the data topic.
@@ -211,6 +217,9 @@ protected:
 
     /// HASerializer that belongs to this device type. It can be nullptr.
     HASerializer* _serializer;
+
+    /// Was last publish or subscribe successful?
+    bool _success;
 
 private:
     enum Availability {

@@ -106,22 +106,25 @@ void HAFan::buildSerializer()
 void HAFan::onMqttConnected()
 {
     if (!uniqueId()) {
+        _success = false;
         return;
     }
 
-    publishConfig();
-    publishAvailability();
+    bool success = true;
+    success &= publishConfig();
+    success &= publishAvailability();
 
     if (!_retain) {
-        publishState(_currentState);
-        publishSpeed(_currentSpeed);
+        success &= publishState(_currentState);
+        success &= publishSpeed(_currentSpeed);
     }
 
-    subscribeTopic(uniqueId(), AHATOFSTR(HACommandTopic));
+    success &= subscribeTopic(uniqueId(), AHATOFSTR(HACommandTopic));
 
     if (_features & SpeedsFeature) {
-        subscribeTopic(uniqueId(), AHATOFSTR(HAPercentageCommandTopic));
+        success &= subscribeTopic(uniqueId(), AHATOFSTR(HAPercentageCommandTopic));
     }
+    _success = success;
 }
 
 void HAFan::onMqttMessage(

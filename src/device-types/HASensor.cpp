@@ -49,11 +49,14 @@ void HASensor::buildSerializer()
 void HASensor::onMqttConnected()
 {
     if (!uniqueId()) {
+        _success = false;
         return;
     }
 
-    publishConfig();
-    publishAvailability();
+    bool success = true;
+    success &= publishConfig();
+    success &= publishAvailability();
+    _success = success;
 }
 
 #endif

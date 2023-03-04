@@ -1,7 +1,7 @@
 #include "HAMqtt.h"
 
 #ifndef ARDUINOHA_TEST
-#include <PubSubClient.h>
+#include <MQTT.h>
 #endif
 
 #include "HADevice.h"
@@ -23,20 +23,25 @@
     _devicesTypes(new HABaseDeviceType*[maxDevicesTypesNb]), \
     _lastWillTopic(nullptr), \
     _lastWillMessage(nullptr), \
-    _lastWillRetain(false)
+    _lastWillRetain(false), \
+    _payloadPtr(NULL), \
+    _payloadStart(NULL), \
+    _payloadRemaining(0), \
+    _client(&netClient), \
+    _qos(qos)
 
 static const char* DefaultDiscoveryPrefix = "homeassistant";
 static const char* DefaultDataPrefix = "aha";
 
 HAMqtt* HAMqtt::_instance = nullptr;
 
-void onMessageReceived(char* topic, uint8_t* payload, unsigned int length)
+void onMessageReceived(MQTTClient *client, char* topic, char* payload, int length)
 {
     if (HAMqtt::instance() == nullptr || length > UINT16_MAX) {
         return;
     }
 
-    HAMqtt::instance()->processMessage(topic, payload, static_cast<uint16_t>(length));
+    HAMqtt::instance()->processMessage(topic, (const uint8_t*)payload, static_cast<uint16_t>(length));
 }
 
 #ifdef ARDUINOHA_TEST
@@ -54,9 +59,10 @@ HAMqtt::HAMqtt(
 HAMqtt::HAMqtt(
     Client& netClient,
     HADevice& device,
-    uint8_t maxDevicesTypesNb
+    uint8_t maxDevicesTypesNb,
+    int qos
 ) :
-    _mqtt(new PubSubClient(netClient)),
+    _mqtt(new MQTTClient(512)),
     HAMQTT_INIT
 {
     _instance = this;
@@ -100,8 +106,8 @@ bool HAMqtt::begin(
     _password = password;
     _initialized = true;
 
-    _mqtt->setServer(serverIp, serverPort);
-    _mqtt->setCallback(onMessageReceived);
+    _mqtt->begin(serverIp, serverPort, *_client);
+    _mqtt->onMessageAdvanced(onMessageReceived);
 
     return true;
 }
@@ -141,8 +147,8 @@ bool HAMqtt::begin(
     _password = password;
     _initialized = true;
 
-    _mqtt->setServer(serverHostname, serverPort);
-    _mqtt->setCallback(onMessageReceived);
+    _mqtt->begin(serverHostname, serverPort, *_client);
+    _mqtt->onMessageAdvanced(onMessageReceived);
 
     return true;
 }
@@ -201,45 +207,46 @@ bool HAMqtt::publish(const char* topic, const char* payload, bool retained)
     ARDUINOHA_DEBUG_PRINT(F("AHA: publishing "))
     ARDUINOHA_DEBUG_PRINT(topic)
     ARDUINOHA_DEBUG_PRINT(F(", len: "))
-    ARDUINOHA_DEBUG_PRINTLN(strlen(payload))
+    ARDUINOHA_DEBUG_PRINT(strlen(payload))
+    ARDUINOHA_DEBUG_PRINT(F(", qos: "))
+    ARDUINOHA_DEBUG_PRINTLN(_qos)
 
-    _mqtt->beginPublish(topic, strlen(payload), retained);
-    _mqtt->write((const uint8_t*)(payload), strlen(payload));
-    return _mqtt->endPublish();
-}
+    bool success = _mqtt->publish(topic, payload, retained, _qos);
 
-bool HAMqtt::beginPublish(
-    const char* topic,
-    uint16_t payloadLength,
-    bool retained
-)
-{
-    ARDUINOHA_DEBUG_PRINT(F("AHA: begin publish "))
-    ARDUINOHA_DEBUG_PRINT(topic)
-    ARDUINOHA_DEBUG_PRINT(F(", len: "))
-    ARDUINOHA_DEBUG_PRINTLN(payloadLength)
+#ifdef ARDUINOHA_DEBUG
+    if (!success) {
+        ARDUINOHA_DEBUG_PRINT("Publish error: ")
+        ARDUINOHA_DEBUG_PRINTLN(_mqtt->lastError())
+    }
+#endif
 
-    return _mqtt->beginPublish(topic, payloadLength, retained);
+    return success;
 }
 
 void HAMqtt::writePayload(const char* data, const uint16_t length)
 {
-    writePayload(reinterpret_cast<const uint8_t*>(data), length);
+    if (length < _payloadRemaining) {
+        strncpy(_payloadPtr, data, length);
+        _payloadPtr += length;
+        _payloadRemaining -= length;
+        *_payloadPtr = char(0);
+    }
 }
 
 void HAMqtt::writePayload(const uint8_t* data, const uint16_t length)
 {
-    _mqtt->write(data, length);
+    writePayload((const char *)data, length);
 }
 
 void HAMqtt::writePayload(const __FlashStringHelper* src)
 {
-    _mqtt->print(src);
-}
-
-bool HAMqtt::endPublish()
-{
-    return _mqtt->endPublish();
+    const uint16_t length = strlen_P((const char *)src);
+    if (length + 1 < _payloadRemaining) {
+        strncpy_P(_payloadPtr, (const char *)src, length);
+        _payloadPtr += length;
+        _payloadRemaining -= length;
+        *_payloadPtr = char(0);
+    }
 }
 
 bool HAMqtt::subscribe(const char* topic)
@@ -247,7 +254,7 @@ bool HAMqtt::subscribe(const char* topic)
     ARDUINOHA_DEBUG_PRINT(F("AHA: subscribing "))
     ARDUINOHA_DEBUG_PRINTLN(topic)
 
-    return _mqtt->subscribe(topic);
+    return _mqtt->subscribe(topic, _qos);
 }
 
 void HAMqtt::processMessage(const char* topic, const uint8_t* payload, uint16_t length)
@@ -281,12 +288,7 @@ void HAMqtt::connectToServer()
     _mqtt->connect(
         _device.getUniqueId(),
         _username,
-        _password,
-        _lastWillTopic,
-        0,
-        _lastWillRetain,
-        _lastWillMessage,
-        true
+        _password
     );
 
     if (isConnected()) {
@@ -302,6 +304,13 @@ void HAMqtt::onConnectedLogic()
     if (_connectedCallback) {
         _connectedCallback();
     }
+
+    _mqtt->setWill(
+        _lastWillTopic,
+        _lastWillMessage,
+        _lastWillRetain,
+        0
+    );
 
     _device.publishAvailability();
 

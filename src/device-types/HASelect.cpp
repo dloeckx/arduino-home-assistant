@@ -126,17 +126,20 @@ void HASelect::buildSerializer()
 void HASelect::onMqttConnected()
 {
     if (!uniqueId()) {
+        _success = false;
         return;
     }
 
-    publishConfig();
-    publishAvailability();
+    bool success = true;
+    success &= publishConfig();
+    success &= publishAvailability();
 
     if (!_retain) {
-        publishState(_currentState);
+        success &= publishState(_currentState);
     }
 
-    subscribeTopic(uniqueId(), AHATOFSTR(HACommandTopic));
+    success &= subscribeTopic(uniqueId(), AHATOFSTR(HACommandTopic));
+    _success = success;
 }
 
 void HASelect::onMqttMessage(

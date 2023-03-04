@@ -5,6 +5,7 @@
 #include <Client.h>
 #include <IPAddress.h>
 #include "ArduinoHADefines.h"
+#include <Client.h>
 
 #define HAMQTT_CALLBACK(name) void (*name)()
 #define HAMQTT_MESSAGE_CALLBACK(name) void (*name)(const char* topic, const uint8_t* payload, uint16_t length)
@@ -13,7 +14,7 @@
 #ifdef ARDUINOHA_TEST
 class PubSubClientMock;
 #else
-class PubSubClient;
+class MQTTClient;
 #endif
 
 class HADevice;
@@ -55,7 +56,8 @@ public:
     explicit HAMqtt(
         Client& netClient,
         HADevice& device,
-        const uint8_t maxDevicesTypesNb = 6
+        const uint8_t maxDevicesTypesNb = 6,
+        const int qos = 0
     );
 #endif
 
@@ -224,19 +226,15 @@ public:
      */
     bool publish(const char* topic, const char* payload, bool retained = false);
 
-    /**
-     * Begins publishing of a message with the given properties.
-     * When this method returns true the payload can be written using HAMqtt::writePayload method.
-     *
-     * @param topic Topic of the published message.
-     * @param payloadLength Length of the payload (bytes) that's going to be published.
-     * @param retained Specifies whether the published message should be retained.
-     */
-    bool beginPublish(const char* topic, uint16_t payloadLength, bool retained = false);
+    void startPayload(char * payloadPtr, const uint16_t length) {
+        _payloadPtr = payloadPtr;
+        _payloadStart = payloadPtr;
+        _payloadRemaining = length;
+    }
 
     /**
-     * Writes given string to the TCP stream.
-     * Please note that before writing any data the HAMqtt::beginPublish method
+     * Writes given string to the string buffer.
+     * Please note that before writing any data the HAMqtt::startPayload method
      * needs to be called.
      *
      * @param data The string to publish.
@@ -245,8 +243,8 @@ public:
     void writePayload(const char* data, const uint16_t length);
 
     /**
-     * Writes given data to the TCP stream.
-     * Please note that before writing any data the HAMqtt::beginPublish method
+     * Writes given data to the string buffer.
+     * Please note that before writing any data the HAMqtt::startPayload method
      * needs to be called.
      *
      * @param data The data to publish.
@@ -255,19 +253,13 @@ public:
     void writePayload(const uint8_t* data, const uint16_t length);
 
     /**
-     * Writes given progmem data to the TCP stream.
-     * Please note that before writing any data the HAMqtt::beginPublish method
+     * Writes given progmem data to the string buffer.
+     * Please note that before writing any data the HAMqtt::startPayload method
      * needs to be called.
      *
      * @param data Progmem data to publish.
      */
     void writePayload(const __FlashStringHelper* data);
-
-    /**
-     * Finishes publishing of a message.
-     * After calling this method the message will be processed by the broker.
-     */
-    bool endPublish();
 
     /**
      * Subscribes to the given topic.
@@ -340,7 +332,7 @@ private:
     PubSubClientMock* _mqtt;
 #else
     /// Instance of the PubSubClient class. It's initialized in the constructor.
-    PubSubClient* _mqtt;
+    MQTTClient* _mqtt;
 #endif
 
     /// Instance of the HADevice passed to the constructor.
@@ -387,6 +379,22 @@ private:
 
     /// The last will retain set by HAMqtt::setLastWill
     bool _lastWillRetain;
+
+    /// Buffer to build json payload, current position
+    char* _payloadPtr;
+
+    /// Buffer to build json payload, start
+    char* _payloadStart;
+
+    /// Size of buffer
+    uint16_t _payloadRemaining;
+
+    /// Net Client
+    Client *_client;
+
+    /// Quality of Service
+    int _qos;
+
 };
 
 #endif
