@@ -223,6 +223,11 @@ bool HAMqtt::publish(const char* topic, const char* payload, bool retained)
     return success;
 }
 
+const int HAMqtt::lastError()
+{
+       return _mqtt->lastError();
+}
+
 void HAMqtt::writePayload(const char* data, const uint16_t length)
 {
     if (length < _payloadRemaining) {

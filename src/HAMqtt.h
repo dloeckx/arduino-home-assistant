@@ -105,6 +105,11 @@ public:
     inline HADevice const* getDevice() const
         { return &_device; }
 
+    /** 
+     * Return last error encountered by mqtt class
+    */
+    const int lastError();
+
     /**
      * Registers a new callback method that will be called when the device receives an MQTT message.
      * Please note that the callback is also fired by internal MQTT messages used by the library.
