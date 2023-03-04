@@ -35,14 +35,11 @@ bool HASensorNumber::setValue(const HANumeric& value, const bool force)
 void HASensorNumber::onMqttConnected()
 {
     if (!uniqueId()) {
-        _success = false;
         return;
     }
 
     HASensor::onMqttConnected();
-    bool success = _success;
-    success &= publishValue(_currentValue);
-    _success = success;
+    publishValue(_currentValue);
 }
 
 bool HASensorNumber::publishValue(const HANumeric& value)

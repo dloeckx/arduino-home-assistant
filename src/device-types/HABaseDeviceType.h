@@ -114,7 +114,7 @@ protected:
      * @param uniqueId THe unique ID of the device type assigned via the constructor.
      * @param topic Topic to subscribe (progmem string).
      */
-    static bool subscribeTopic(
+    void subscribeTopic(
         const char* uniqueId,
         const __FlashStringHelper* topic
     );
@@ -155,13 +155,13 @@ protected:
     /**
      * Publishes configuration of this device type on the HA discovery topic.
      */
-    bool publishConfig();
+    void publishConfig();
 
     /**
      * Publishes current availability of the device type.
      * The message is only produced if the availability is configured for this device type.
      */
-    bool publishAvailability();
+    void publishAvailability();
 
     /**
      * Publishes the given flash string on the data topic.

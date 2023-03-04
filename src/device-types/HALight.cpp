@@ -197,35 +197,32 @@ void HALight::buildSerializer()
 void HALight::onMqttConnected()
 {
     if (!uniqueId()) {
-        _success = false;
         return;
     }
 
-    bool success = true;
-    success &= publishConfig();
-    success &= publishAvailability();
+    publishConfig();
+    publishAvailability();
 
     if (!_retain) {
-        success &= publishState(_currentState);
-        success &= publishBrightness(_currentBrightness);
-        success &= publishColorTemperature(_currentColorTemperature);
-        success &= publishRGBColor(_currentRGBColor);
+        publishState(_currentState);
+        publishBrightness(_currentBrightness);
+        publishColorTemperature(_currentColorTemperature);
+        publishRGBColor(_currentRGBColor);
     }
 
-    success &= subscribeTopic(uniqueId(), AHATOFSTR(HACommandTopic));
+    subscribeTopic(uniqueId(), AHATOFSTR(HACommandTopic));
 
     if (_features & BrightnessFeature) {
-        success &= subscribeTopic(uniqueId(), AHATOFSTR(HABrightnessCommandTopic));
+        subscribeTopic(uniqueId(), AHATOFSTR(HABrightnessCommandTopic));
     }
 
     if (_features & ColorTemperatureFeature) {
-        success &= subscribeTopic(uniqueId(), AHATOFSTR(HAColorTemperatureCommandTopic));
+        subscribeTopic(uniqueId(), AHATOFSTR(HAColorTemperatureCommandTopic));
     }
 
     if (_features & RGBFeature) {
-        success &= subscribeTopic(uniqueId(), AHATOFSTR(HARGBCommandTopic));
+        subscribeTopic(uniqueId(), AHATOFSTR(HARGBCommandTopic));
     }
-    _success = success;
 }
 
 void HALight::onMqttMessage(

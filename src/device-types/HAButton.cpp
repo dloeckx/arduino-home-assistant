@@ -43,15 +43,12 @@ void HAButton::buildSerializer()
 void HAButton::onMqttConnected()
 {
     if (!uniqueId()) {
-        _success = false;
         return;
     }
 
-    bool success = true;
-    success &= publishConfig();
-    success &= publishAvailability();
-    success &= subscribeTopic(uniqueId(), AHATOFSTR(HACommandTopic));
-    _success = success;
+    publishConfig();
+    publishAvailability();
+    subscribeTopic(uniqueId(), AHATOFSTR(HACommandTopic));
 }
 
 void HAButton::onMqttMessage(

@@ -44,14 +44,11 @@ void HACamera::buildSerializer()
 void HACamera::onMqttConnected()
 {
     if (!uniqueId()) {
-        _success = false;
         return;
     }
 
-    bool success = true;
-    success &= publishConfig();
-    success &= publishAvailability();
-    _success = success;
+    publishConfig();
+    publishAvailability();
 }
 
 const __FlashStringHelper* HACamera::getEncodingProperty() const

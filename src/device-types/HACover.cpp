@@ -89,21 +89,18 @@ void HACover::buildSerializer()
 void HACover::onMqttConnected()
 {
     if (!uniqueId()) {
-        _success = false;
         return;
     }
 
-    bool success = true;
-    success &= publishConfig();
-    success &= publishAvailability();
+    publishConfig();
+    publishAvailability();
 
     if (!_retain) {
-        success &= publishState(_currentState);
-        success &= publishPosition(_currentPosition);
+        publishState(_currentState);
+        publishPosition(_currentPosition);
     }
 
-    success &= subscribeTopic(uniqueId(), AHATOFSTR(HACommandTopic));
-    _success = success;
+    subscribeTopic(uniqueId(), AHATOFSTR(HACommandTopic));
 }
 
 void HACover::onMqttMessage(

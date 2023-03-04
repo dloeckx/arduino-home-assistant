@@ -46,15 +46,12 @@ void HABinarySensor::buildSerializer()
 void HABinarySensor::onMqttConnected()
 {
     if (!uniqueId()) {
-        _success = false;
         return;
     }
 
-    bool success = true;
-    success &= publishConfig();
-    success &= publishAvailability();
-    success &= publishState(_currentState);
-    _success = success;
+    publishConfig();
+    publishAvailability();
+    publishState(_currentState);
 }
 
 bool HABinarySensor::publishState(const bool state)

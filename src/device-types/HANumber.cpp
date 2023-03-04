@@ -109,20 +109,17 @@ void HANumber::buildSerializer()
 void HANumber::onMqttConnected()
 {
     if (!uniqueId()) {
-        _success = false;
         return;
     }
 
-    bool success = true;
-    success &= publishConfig();
-    success &= publishAvailability();
+    publishConfig();
+    publishAvailability();
 
     if (!_retain) {
-        success &= publishState(_currentState);
+        publishState(_currentState);
     }
 
-    success = subscribeTopic(uniqueId(), AHATOFSTR(HACommandTopic));
-    _success = success;
+    subscribeTopic(uniqueId(), AHATOFSTR(HACommandTopic));
 }
 
 void HANumber::onMqttMessage(

@@ -93,7 +93,6 @@ void HADeviceTrigger::buildSerializer()
 void HADeviceTrigger::onMqttConnected()
 {
     if (!uniqueId()) {
-        _success = false;
         return;
     }
 
