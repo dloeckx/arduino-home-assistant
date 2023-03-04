@@ -86,7 +86,7 @@ bool HABaseDeviceType::publishConfig()
         componentName(),
         uniqueId()
     );
-    const uint16_t dataLength = _serializer->calculateSize() + 1;
+    const uint16_t dataLength = _serializer->calculateSize() + 2;
 
     if (topicLength > 0 && dataLength > 0) {
         char topic[topicLength];
